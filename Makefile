@@ -12,7 +12,9 @@ BG_INC = -I$(BG_PATH)/include
 BG_LIB = -L$(BG_PATH)/lib
 
 # compilers/flags
-compiler = g++ -O3 -Wall
+#compiler = g++ -O3 -Wall
+# if you run on SCOREC, make sure you module load gcc/4.9.2 first to have a g++ versin high enough to support C++11
+compiler = g++ -std=c++11 -O3 -W
 pcompiler = mpic++ -O3 -std=c++0x -Wall
 flags = -I$(incdir) -I$(algodir) -I$(algodir)/topology
 
@@ -55,6 +57,9 @@ mmsp2vtk: TKmmsp2vti.cpp $(core)
 	$(compiler) $(flags) $< -o $@ -lz
 
 mmsp2xyz: mmsp2xyz.cpp $(core)
+	$(compiler) $(flags) $< -o $@ -lz
+
+CountGrain: CountGrain.cpp $(core) 
 	$(compiler) $(flags) $< -o $@ -lz
 
 mmsp2xyzStat: mmsp2xyzStat.cpp $(core)
