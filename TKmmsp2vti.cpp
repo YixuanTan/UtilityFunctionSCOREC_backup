@@ -14,6 +14,21 @@ bool fexists(const char *filename) {
 	return ifile;
 }
 
+const int hashsize = 200;
+
+int hashfunc(long long num) {
+  long long hashvalue = 0;
+  long long power = 1;
+  while (num > 0) {
+    int digit = num % 10;
+    num /= 10;
+    hashvalue += digit * power;
+    power *= 33;
+    hashvalue %= hashsize;
+  }
+  return hashvalue;
+}
+
 int main(int argc, char* argv[]) {
 	// command line error check
 	if ( argc != 3 ) {
@@ -353,11 +368,11 @@ int main(int argc, char* argv[]) {
 				} else if (dim == 2) {
 					MMSP::grid<2, MMSP::scalar<unsigned long> > GRID(fields, lmin, lmax);
 					GRID.from_buffer(buffer);
-					for (long k = 0; k < MMSP::nodes(GRID); k++) output << GRID(k)%20 << " ";
+					for (long k = 0; k < MMSP::nodes(GRID); k++) output << hashfunc(GRID(k)) + 1<< " ";
 				} else if (dim == 3) {
 					MMSP::grid<3, MMSP::scalar<unsigned long> > GRID(fields, lmin, lmax);
 					GRID.from_buffer(buffer);
-					for (long k = 0; k < MMSP::nodes(GRID); k++) output << GRID(k) << " ";
+					for (long k = 0; k < MMSP::nodes(GRID); k++) output << hashfunc(GRID(k)) + 1 << " ";
 				}
 			}
 			if (short_type) {
@@ -561,7 +576,7 @@ int main(int argc, char* argv[]) {
 					MMSP::grid<3, MMSP::vector<unsigned long> > GRID(fields, lmin, lmax);
 					GRID.from_buffer(buffer);
 					for (int k = 0; k < MMSP::nodes(GRID); k++)
-						for (int h = 0; h < fields; h++) output << GRID(k)[h] << " ";
+					  for (int h = 0; h < fields; h++) output << hashfunc(GRID(k)[h]) + 1 << " ";
 				}
 			}
 			if (short_type) {

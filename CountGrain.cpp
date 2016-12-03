@@ -3,7 +3,6 @@
 // Output:  CSV file specifying XYZ+phase
 // Depends: MMSP, zlib
 
-// Questions/Comments to trevor.keller@gmail.com (Trevor Keller)
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -16,15 +15,16 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <iterator>
+#include <stdlib.h>
 
 using namespace MMSP;
 
 int main(int argc, char* argv[]) {
-	if ( argc != 2 && argc != 3) {
-		std::cout << "Usage: " << argv[0] << " xxx.dat [idToPixelNumberMap->txt]\n";
+	if ( argc != 2 && argc != 3 && argc != 6) {
+		std::cout << "Usage: " << argv[0] << " xxx.dat [idToPixelNumberMap->txt] [x_low_bound] [x_high_bound [dim_of_grad]]\n";
 		return ( 1 );
 	}
-
+	
 	// file open error check
 	std::ifstream input(argv[1]);
 	if (!input) {
@@ -35,6 +35,12 @@ int main(int argc, char* argv[]) {
 	// read data type
 	std::string type;
 	getline(input, type, '\n');
+
+	int gradDir = 0;
+	if (argc == 6) {
+	  gradDir = atoi(argv[5]);
+	}
+	std::cout << "argc:" << argc << "  gradDir: " << gradDir << std::endl;
 
   bool unsigned_long_type = (type.find("unsigned long") != std::string::npos);
   if (unsigned_long_type == false) {
@@ -107,13 +113,30 @@ int main(int argc, char* argv[]) {
 	  // read block limits
 	  int lmin[3] = {0, 0, 0};
 	  int lmax[3] = {0, 0, 0};
+    int gmin[3] = {0, 0, 0};
+    int gmax[3] = {0, 0, 0};
+
+    for (int j = 0; j < dim; j++) {
+      gmin[j] = g0[j];
+      gmax[j] = g1[j] - 1;
+    }
+
+    if (argc == 6) {
+      gmin[gradDir] = atoi(argv[3]);
+      gmax[gradDir] = atoi(argv[4]);
+      #ifdef DEBUG
+        std::cout << "dim: " << gradDir << "   min: " << gmin[gradDir] << " max: " << gmax[gradDir] << std::endl;
+      #endif
+    }
+
+
 	  for (int j = 0; j < dim; j++) {
 		  input.read(reinterpret_cast<char*>(&lmin[j]), sizeof(lmin[j]));
 		  input.read(reinterpret_cast<char*>(&lmax[j]), sizeof(lmax[j]));
 	  }
-	  #ifdef DEBUG
-	  std::cout<<"  Block edge is "<<lmax[0] - lmin[0]<<std::endl;
-	  #endif
+	  //#ifdef DEBUG
+	  //std::cout<<"  Block edge is "<<lmax[0] - lmin[0]<<std::endl;
+	  //#endif
 	  int blo[dim];
     int bhi[dim];
     // read boundary conditions
@@ -128,9 +151,9 @@ int main(int argc, char* argv[]) {
 	  input.read(reinterpret_cast<char*>(&size), sizeof(size)); // read compressed size
 	  char* compressed_buffer = new char[size];
 	  input.read(compressed_buffer, size);
-	  #ifdef DEBUG
-	  std::cout<<"  Read "<<size<<" B, compressed data."<<std::endl;
-	  #endif
+	  //#ifdef DEBUG
+	  //std::cout<<"  Read "<<size<<" B, compressed data."<<std::endl;
+	  //#endif
 	  char* buffer;
 		if (size!=rawSize) {
 		  // Decompress data
@@ -164,7 +187,10 @@ int main(int argc, char* argv[]) {
           vector<int> x (2,0);
           x[0] = lmin[0] + l;
           x[1] = lmin[1] + k;
-          if (x[0] == g0[0] || x[0] == g1[0] - 1 || x[1] == g0[1] || x[1] == g1[1] - 1) {
+          if (argc == 6 && (x[gradDir] < gmin[gradDir] || x[gradDir] > gmax[gradDir])) {
+            continue;
+          }
+          if (x[0] == gmin[0] || x[0] == gmax[0] || x[1] == gmin[1] || x[1] == gmax[1]) {
             if (boundaryGrainId->find(GRID(x)) == boundaryGrainId->end()) {
               boundaryGrainId->insert(GRID(x));
             }
@@ -181,7 +207,10 @@ int main(int argc, char* argv[]) {
             x[0] = lmin[0] + l;
             x[1] = lmin[1] + k;
             x[2] = lmin[2] + m;
-            if (x[0] == g0[0] || x[0] == g1[0] - 1 || x[1] == g0[1] || x[1] == g1[1] - 1 || x[2] == g0[2] || x[2] == g1[2] - 1) {
+            if (argc == 6 && (x[gradDir] < gmin[gradDir] || x[gradDir] > gmax[gradDir])) {
+              continue;
+            }
+            if (x[0] == gmin[0] || x[0] == gmax[0] || x[1] == gmin[1] || x[1] == gmax[1] || x[2] == gmin[2] || x[2] == gmax[2]) {
               if (boundaryGrainId->find(GRID(x)) == boundaryGrainId->end()) {
                 boundaryGrainId->insert(GRID(x));
               }
@@ -206,13 +235,30 @@ int main(int argc, char* argv[]) {
     // read block limits
     int lmin[3] = {0, 0, 0};
     int lmax[3] = {0, 0, 0};
+
+    int gmin[3] = {0, 0, 0};
+    int gmax[3] = {0, 0, 0};
+
+    for (int j = 0; j < dim; j++) {
+      gmin[j] = g0[j];
+      gmax[j] = g1[j] - 1;
+    }
+
+    if (argc == 6) {
+      gmin[gradDir] = atoi(argv[3]);
+      gmax[gradDir] = atoi(argv[4]);
+      #ifdef DEBUG
+        std::cout << "dim: " << gradDir << "   min: " << gmin[gradDir] << " max: " << gmax[gradDir] << std::endl;
+      #endif
+    }
+
     for (int j = 0; j < dim; j++) {
       input.read(reinterpret_cast<char*>(&lmin[j]), sizeof(lmin[j]));
       input.read(reinterpret_cast<char*>(&lmax[j]), sizeof(lmax[j]));
     }
-    #ifdef DEBUG
-    std::cout<<"  Block edge is "<<lmax[0] - lmin[0]<<std::endl;
-    #endif
+    //#ifdef DEBUG
+    //std::cout<<"  Block edge is "<<lmax[0] - lmin[0]<<std::endl;
+    //#endif
     int blo[dim];
     int bhi[dim];
     // read boundary conditions
@@ -227,9 +273,9 @@ int main(int argc, char* argv[]) {
     input.read(reinterpret_cast<char*>(&size), sizeof(size)); // read compressed size
     char* compressed_buffer = new char[size];
     input.read(compressed_buffer, size);
-    #ifdef DEBUG
-    std::cout<<"  Read "<<size<<" B, compressed data."<<std::endl;
-    #endif
+    //#ifdef DEBUG
+    //std::cout<<"  Read "<<size<<" B, compressed data."<<std::endl;
+    //#endif
     char* buffer;
     if (size!=rawSize) {
       // Decompress data
@@ -263,6 +309,9 @@ int main(int argc, char* argv[]) {
           vector<int> x (2,0);
           x[0] = lmin[0] + l;
           x[1] = lmin[1] + k;
+          if (argc == 6 && (x[gradDir] < gmin[gradDir] || x[gradDir] > gmax[gradDir])) {
+            continue;
+          }
           unsigned long id = GRID(x);
           if (boundaryGrainId->find(id) == boundaryGrainId->end()) {
             if (idToPixelNumberMap->find(id) == idToPixelNumberMap->end()) {
@@ -284,6 +333,9 @@ int main(int argc, char* argv[]) {
             x[0] = lmin[0] + l;
             x[1] = lmin[1] + k;
             x[2] = lmin[2] + m;
+            if (argc == 6 && (x[gradDir] < gmin[gradDir] || x[gradDir] > gmax[gradDir])) {
+              continue;
+            }
             unsigned long id = GRID(x);
             if (boundaryGrainId->find(id) == boundaryGrainId->end()) {
               if (idToPixelNumberMap->find(id) == idToPixelNumberMap->end()) {
@@ -312,7 +364,7 @@ int main(int argc, char* argv[]) {
   std::string str1 = str.substr(str.find_first_of('.') + 1);
   std::cout << str1.substr(0, str1.find_first_of('.')) << "  " <<  idToPixelNumberMap->size() << "  " << boundaryGrainId->size() << std::endl; 
 
-  if (argc == 3) {
+  if (argc == 3 || argc == 6) {
     std::ofstream outFile;
     std::string outputfile(argv[2]);
     outFile.open(outputfile);

@@ -1,4 +1,4 @@
-q// mmsp2vti.cpp
+// vti.cpp
 // Convert MMSP grid data to VTK image data format
 // Questions/comments to gruberja@gmail.com (Jason Gruber)
 

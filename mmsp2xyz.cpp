@@ -16,6 +16,21 @@
 
 using namespace MMSP;
 
+const int hashsize = 200;
+
+int hashfunc(long long num) {
+  long long hashvalue = 0;
+  long long power = 1;
+  while (num > 0) {
+    int digit = num % 10;
+    num /= 10;
+    hashvalue += digit * power;
+    power *= 33;
+    hashvalue %= hashsize;
+  }
+  return hashvalue;
+}
+
 int main(int argc, char* argv[]) {
 	if ( argc > 4 || argc < 3 ) {
 		std::cout << "Usage: " << argv[0] << " data.dat grain_id output.csv\n";
@@ -195,7 +210,7 @@ int main(int argc, char* argv[]) {
               x[1] = lmin[1] + k;
 //              t << x[0] <<" "<< x[1] <<" "<< colors[GRID(x)%est_grains] <<"\n";
 //std::cout<< x[0] << " " << x[1] << "\n";
-              output << x[0] << " " << x[1] << " " << GRID(x) << "\n";  //no color randomization
+              output << x[0] << " " << x[1] << " " << hashfunc(GRID(x)) << "\n";  //no color randomization
 //std::cout<< x[0] << " " << x[1] << "\n";
 //std::cout<< "GRID(x) "<<GRID(x) << "\n";
               if(max_grain_id<GRID(x)){
@@ -246,7 +261,7 @@ int main(int argc, char* argv[]) {
               x[1] = lmin[1] + k;
 //              output << x[0] <<" "<< x[1] <<" "<< colors[GRID(x)%est_grains] <<"\n";
 //std::cout<< x[0] << " " << x[1] << "\n";
-              output << x[0] << " " << x[1] << " " << GRID(x) << "\n";  //no color randomization
+              output << x[0] << " " << x[1] << " " << hashfunc(GRID(x)) << "\n";  //no color randomization
 //std::cout<< x[0] << " " << x[1] << "\n";
 //std::cout<< "GRID(x) "<<GRID(x) << "\n";
               if(max_grain_id<GRID(x)){

@@ -14,7 +14,9 @@ BG_LIB = -L$(BG_PATH)/lib
 # compilers/flags
 #compiler = g++ -O3 -Wall
 # if you run on SCOREC, make sure you module load gcc/4.9.2 first to have a g++ versin high enough to support C++11
-compiler = g++ -std=c++11 -O3 -W
+#compiler = g++ -std=c++11 -O3 -W 
+# if you add -O3 to the compiler, you may get weird errors std::bad_alloc(), I guess the compiler optimization did something bad...
+compiler = g++ -std=c++11 -W                                                                                                                                                                                                                  
 pcompiler = mpic++ -O3 -std=c++0x -Wall
 flags = -I$(incdir) -I$(algodir) -I$(algodir)/topology
 
@@ -54,6 +56,12 @@ wrongendian: wrongendian.cpp
 	$(compiler) $< -o $@.out -lz -pthread
 
 mmsp2vtk: TKmmsp2vti.cpp $(core)
+	$(compiler) $(flags) $< -o $@ -lz
+
+mmsp2vtkFusionline: mmsp2vtkFusionline.cpp $(core)
+	$(compiler) $(flags) $< -o $@ -lz
+
+mmsp2vtkHaz: mmsp2vtkHaz.cpp $(core)
 	$(compiler) $(flags) $< -o $@ -lz
 
 mmsp2xyz: mmsp2xyz.cpp $(core)
