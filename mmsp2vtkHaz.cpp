@@ -2,11 +2,12 @@
 // Convert MMSP grid data to VTK image data format
 // Questions/comments to gruberja@gmail.com (Jason Gruber)
 
-#include"MMSP.hpp"
-#include<zlib.h>
-#include<sstream>
-#include<vector>
-#include<unordered_map>
+#include "MMSP.hpp"
+#include <zlib.h>
+#include <sstream>
+#include <vector>
+#include <unordered_map>
+#include <algorithm>
 
 double T0 = 1248;
 double Tq = 2131;
@@ -15,7 +16,7 @@ double Tlambda =61000; // 0.5/(20/4000/610*1.0e6)
 double Tk = 20; 
 double Tv = 1.0e-3;
 double Tepsilon = 1.0;
-double repsilon = 1.0e-6;
+double repsilon = 15.0e-6;
 double lambda = 30.0e-6;  //m
 int hashsize = 200;
 
@@ -411,9 +412,7 @@ int main(int argc, char* argv[]) {
 									    for(double time = (lambda*cody/Tv); time < physical_time+0.1; time += 0.1){
 												   double r_temp =  sqrt(pow(lambda*codx,2) + pow(lambda*cody-Tv*time, 2) + pow(lambda*codz,2)); 
 											     double tmp_temp = T0 + Tq*Teta/2/3.1415926/Tk/r_temp*exp(-Tlambda*Tv*(r_temp-Tv*time)); 
-												   if(highest_tmp < tmp_temp){
-													  	highest_tmp = tmp_temp;
-												   }
+											  	 highest_tmp = std::max(highest_tmp, tmp_temp);
 											}
 											temperature = highest_tmp;
 								  }
@@ -421,36 +420,33 @@ int main(int argc, char* argv[]) {
 								  if(temperature>fusion_temp_thresh){
 											output << 0 << " ";
 								  }
-								  
 						      else if(codx==g0[0]){
-			//-----------------r-fusion line-------------------
+												//-----------------r-fusion line-------------------
+						      		  // count the circular part
 											 if(lambda*cody>=Tv*physical_time){
 														if(fabs(r_fusion+distance - r) < repsilon){
-																//output << 0 << " ";
-																  output << hashfunc(GRID(coords)) + 1<< " ";   
+																  output << 0 << " ";
+																  //output << hashfunc(GRID(coords)) + 1<< " ";   
 																	unsigned long site_id = GRID(coords);
 																	if(grain_ids->count(site_id) == 0)
-																			grain_ids->insert(std::pair<long long, long long>(site_id, 0));
+																			grain_ids->insert(std::pair<long long, long long>(site_id, 1));
 																	else{
 																			(*grain_ids)[site_id]++;
 																	}
 														} else {
 																	output << hashfunc(GRID(coords)) + 1<< " ";   
 														}
-										   } else {
+										   } else { // count the non-circular part
 												 		double highest_tmp = 0.0;
 												    for(double time = (lambda*cody/Tv); time < physical_time+0.1; time += 0.1){
 															  double r_temp =  sqrt(pow(lambda*codx,2) + pow(lambda*cody-Tv*time, 2) + pow(lambda*codz,2)) - distance; 
 														    double tmp_temp = T0 + Tq*Teta/2/3.1415926/Tk/r_temp*exp(-Tlambda*Tv*(r_temp-Tv*time)); 
-															  if(highest_tmp < tmp_temp) {
-																  	highest_tmp = tmp_temp;
-															  }
+															  highest_tmp = std::max(highest_tmp, tmp_temp);
 											 			}
-
 													  if(fabs(highest_tmp- fusion_temp_thresh)<Tepsilon){
 																//------------------calculate the low boundary length of HAZ zone------------------------
 																int line_segement_interval = (int((Tv*physical_time)/4/lambda));
-																if(cody%line_segement_interval<2 && line_node_flags[cody/line_segement_interval]==true){
+																if(cody%line_segement_interval<3 && line_node_flags[cody/line_segement_interval]==true){
 																    int index = cody/line_segement_interval;
 																	line_node_flags[index] = false;
 																	nodes_y[index] = lambda*cody;
@@ -460,8 +456,8 @@ int main(int argc, char* argv[]) {
 																//output << 0 << " ";
 																output << hashfunc(GRID(coords)) + 1<< " ";   
 																unsigned long site_id = GRID(coords);
-																if(grain_ids->count(site_id) == 0)
-																		grain_ids->insert(std::pair<long long, long long>(site_id, 0));
+																if(grain_ids->count(site_id) == 1)
+																		grain_ids->insert(std::pair<long long, long long>(site_id, 1));
 																else{
 																		(*grain_ids)[site_id]++;
 																}
@@ -1193,21 +1189,34 @@ int main(int argc, char* argv[]) {
   double extra_length = 0.0;
   nodes_y[4] = Tv*physical_time;
   nodes_z[4] = r_fusion + distance;
-  std::cout<<"--------------extra line discrete node points (y z)--------------"<<std::endl;
+  //  std::cout<<"--------------extra line discrete node points (y z)--------------"<<std::endl;
   /*  
   extra_length += (nodes_y[1] - nodes_y[0]) * (nodes_y[1] - nodes_y[0]) * (nodes_z[1] - nodes_z[0]) * (nodes_z[1] - nodes_z[0]);
   extra_length += (nodes_y[2] - nodes_y[1]) * (nodes_y[2] - nodes_y[1]) * (nodes_z[2] - nodes_z[1]) * (nodes_z[2] - nodes_z[1]);
   extra_length += (nodes_y[3] - nodes_y[2]) * (nodes_y[3] - nodes_y[2]) * (nodes_z[3] - nodes_z[2]) * (nodes_z[3] - nodes_z[2]);
   extra_length += (nodes_y[4] - nodes_y[3]) * (nodes_y[4] - nodes_y[3]) * (nodes_z[4] - nodes_z[3]) * (nodes_z[4] - nodes_z[3]);
-  */
-  for(int i=0;i<4; i++){
+  for(int i=0;i<=4; i++){
     std::cout<<nodes_y[i]<<" "<<nodes_z[i]<<std::endl; 
-    extra_length += sqrt((nodes_y[i+1]-nodes_y[i])*(nodes_y[i+1]-nodes_y[i])+(nodes_z[i+1]-nodes_z[i])*(nodes_z[i+1]-nodes_z[i]));
+  }
+  */
+  if (physical_time == 0.0) {
+  	extra_length = 0.0;
+  } else {
+	  for(int i=0;i<4; i++){
+	    extra_length += sqrt((nodes_y[i+1]-nodes_y[i])*(nodes_y[i+1]-nodes_y[i])+(nodes_z[i+1]-nodes_z[i])*(nodes_z[i+1]-nodes_z[i]));
+	  }
   }
   std::cout<<"----------------------------------------------------------------"<<std::endl;
+  std::cout << "extra_length: " << extra_length << std::endl;
   line_length += extra_length;
+  /*
+  unsigned long grain_num = 0;
+  for (auto i : *grain_ids) {
+  	grain_num += i.second;
+  }
+  */
   unsigned long grain_num = grain_ids->size();
-  std::cout<<"grain_num "<< grain_ids->size() <<std::endl;
+  std::cout<<"grain_num "<< grain_num <<std::endl;
 
   std::cout<<"line_length "<<line_length<<std::endl;
   double grain_size = line_length/grain_num;
